@@ -63,7 +63,7 @@ export function provider(message: IMessage) {
 /**
  * Get the previous status for the channel if we have it cached.
  */
-export async function previousStatus(this: Parser, message: IMessage, _settings: ISetting, _context: ParserContext, type: string = 'title') {
+export async function previousstatus(this: Parser, message: IMessage, _settings: ISetting, _context: ParserContext, type: string = 'title') {
     const previous = await this.middleware.onHandleMethod('previousStatus', message);
     if (previous == null) {
         return '[Error: Unable to get previous status]';
