@@ -1,6 +1,6 @@
 {
   "name": "beepbot-message-parser",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "author": "Kieron Richardson <artdude543@hotmail.co.uk>",
   "description": "Message parser for BeepBot.",
   "main": "dist/index.js",
