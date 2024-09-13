@@ -1,18 +1,19 @@
 import 'source-map-support/register';
 
 import * as fetch from 'isomorphic-fetch';
-import { trim } from 'lodash';
+import { set, trim } from 'lodash';
 import MagicString from 'magic-string';
 import { memoize } from 'memoize-lit';
 
 import { parser } from './compiler/parser';
 import { tokenizer } from './compiler/tokenizer';
 import { IExpression, transformer } from './compiler/transformer';
-import { IMessage, ISetting } from './interface';
+import { IMessage, ISetting, ParserMethod } from './interface';
 import { methods } from './methods';
 import { Middleware } from './middleware';
 
 export { VarType } from './methods/variable';
+export { IMessage, ISetting, ParserMethod } from './interface';
 
 export interface ParserContext {
     cache: Array<string | number | boolean | string[] | number[] | object>;
@@ -38,6 +39,8 @@ const REPEAT_WHITELIST = [
 ];
 
 export class Parser {
+    private _methods: { [name: ParserMethod['name']]: ParserMethod['method'] } = methods;
+
     constructor(public middleware: Middleware = {}) {
         if (middleware?.onServiceAPI) {
             this.middleware.onServiceAPI = memoize(middleware.onServiceAPI, { maxAge: 60000 }); // 1 minute memoize
@@ -49,9 +52,6 @@ export class Parser {
 
     /**
      * Parse the text given to return the parsed generated outputs.
-     *
-     * This takes data from the message arg (ChannelMessage) from backend. To create
-     * some data otherwise the parsers hits various APIs to get the data needed.
      */
     public async parse(message: IMessage, settings: ISetting, text: string) {
         const token = tokenizer(text);
@@ -98,6 +98,61 @@ export class Parser {
         context = undefined;
 
         return trim(original.toString());
+    }
+
+    /**
+     * Parse a simple text without any context. This is useful for simple text parsing, the system will try to build the missing context for backwards compatibility.
+     *
+     * Note: This could have unexpected results as the system may not know the correct context to use. To correct this, use the `parse` method and provide the correct context.
+     */
+    public async parseWithOutContext(text: string, messageContext: Partial<IMessage> = {}, settingsContext: Partial<ISetting> = {}): Promise<string> {
+        let message: IMessage = {
+            channel: {
+                id: '1',
+                name: 'SimpleParser',
+            },
+            provider: 'simple-parser',
+            message: {
+                args: text.split(/\s+/),
+                raw: text,
+            },
+            user: {
+                id: '1',
+                name: 'SimpleParser',
+            },
+            ...messageContext,
+        };
+        const settings: ISetting = {
+            timezone: 'America/New_York',
+            ...settingsContext,
+        };
+
+        return this.parse(message, settings, text);
+    }
+
+    /**
+     * Add a method(s) to the parser.
+     *
+     * This will allow you to add custom methods to the parser.
+     */
+    public addMethods(methods: ParserMethod | ParserMethod[]) {
+        if (Array.isArray(methods)) {
+            for (const m of methods) {
+                if (this._methods[m.name]) {
+                    throw new Error(`Method ${m.name} already exists`);
+                }
+
+                this._methods[m.name] = m.method;
+            }
+
+            return;
+        }
+
+        if (this._methods[methods.name]) {
+            throw new Error(`Method ${methods.name} already exists`);
+        }
+
+        this._methods[methods.name] = methods.method;
     }
 
     /**

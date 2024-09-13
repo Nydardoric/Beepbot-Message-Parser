@@ -1,3 +1,5 @@
+import { ParserContext } from '../';
+
 export interface IMessage {
     channel: {
         id: string | number;
@@ -38,4 +40,12 @@ export interface ISetting {
      * Valid: https://momentjs.com/timezone/
      */
     timezone: string;
+}
+
+
+export type ReturnValueType = string | number | boolean | undefined;
+
+export interface ParserMethod {
+    name: string;
+    method: (message: IMessage, settings: ISetting, context: ParserContext, ...args: ReturnValueType[]) => ReturnValueType | Promise<ReturnValueType>
 }
